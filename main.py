@@ -344,9 +344,9 @@ class BiliSubscribe(BasePlugin):
                     continue
 
                 # 推送直播状态（含直播封面）
-                live_status, live_cover = self.get_live_status_with_cover(uid)
+                live_status, live_cover, live_url = self.get_live_status_with_cover(uid)
                 if live_status == 1:
-                    message = f"📢 {data['name']} 正在直播！\nhttps://live.bilibili.com/{uid}"
+                    message = f"📢 {data['name']} 正在直播！\n{live_url}"
                     if data['groups'][group_id]['live_at_all']:
                         message = f"[CQ:at,qq=all] {message}"
                     if live_cover:
@@ -408,13 +408,14 @@ class BiliSubscribe(BasePlugin):
         user_name = data['name']
 
         for group_id, settings in data['groups'].items():
+            live_status, _, live_url = self.get_live_status_with_cover(uid)
             if new_status == 1:
-                message = f"📢 {user_name} 开播啦！\nhttps://live.bilibili.com/{uid}"
+                message = f"📢 {user_name} 开播啦！\n{live_url}"
                 if settings['live_at_all']:
                     message = f"[CQ:at,qq=all] {message}"
                 await self.api.post_group_msg(group_id, text=message)
             elif new_status == 0:
-                message = f"📢 {user_name} 下播了 \nhttps://live.bilibili.com/{uid}"
+                message = f"📢 {user_name} 下播了 \n{live_url}"
                 if settings['live_at_all']:
                     message = f"[CQ:at,qq=all] {message}"
                 await self.api.post_group_msg(group_id, text=message)
@@ -531,8 +532,8 @@ class BiliSubscribe(BasePlugin):
 
     def get_live_status_with_cover(self, uid: str):
         """
-        获取直播状态和直播封面
-        返回: (live_status, cover_url)
+        获取直播状态和直播封面和直播间url
+        返回: (live_status, cover_url, live_url)
         """
         try:
             headers = {
@@ -546,14 +547,15 @@ class BiliSubscribe(BasePlugin):
             )
             if "application/json" not in res.headers.get("Content-Type", ""):
                 _log.error(f"获取直播状态API返回内容不是JSON: {res.text[:200]}")
-                return 0, None
+                return 0, None, None
             data = res.json().get('data', {})
             live_status = data.get('liveStatus', 0)
             cover_url = data.get('cover', None)
-            return live_status, cover_url
+            live_url = f"https://live.bilibili.com/{data.get('roomid', '')}" if data.get('roomid') else ""
+            return live_status, cover_url, live_url
         except Exception as e:
             _log.error(f"获取直播状态和封面失败: {str(e)}")
-            return 0, None
+            return 0, None, None
 
     def get_latest_dynamic(self, uid: str) -> str:
         """获取最新动态ID"""
