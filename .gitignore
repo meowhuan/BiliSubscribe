@@ -33,3 +33,5 @@ ENV/
 # OS
 .DS_Store
 Thumbs.db
+db/bili_subscribe_cookie.key
+db/bili_subscribe_cookies.db
